@@ -1,0 +1,23 @@
+{
+  "$schema": "../../schema/library.schema.json",
+  "manifest_version": 1,
+  "id": "tangency-labs.example-cube",
+  "name": "Example: one cube",
+  "publisher": "tangency-labs",
+  "repo": "tangency-labs/solidcraft-parts",
+  "release": {
+    "tag": "example-cube-v1",
+    "asset": "example-cube-1.zip",
+    "sha256": "6d07ec5d2badc4d46640e4667c098ceaefddd9050334bd9fe1101595e8c9d62f",
+    "size": 588
+  },
+  "format": "folder",
+  "format_version": 1,
+  "min_solidcraft": "0.49.1",
+  "license": "MIT",
+  "description": "A one-part library that shows the manifest layout: a 20 mm cube as an STL file. Not a real library, so it is left out of index.json.",
+  "tags": ["example"],
+  "homepage": "https://github.com/tangency-labs/solidcraft-parts",
+  "tier": "official",
+  "example": true
+}

@@ -1,0 +1,5 @@
+# GitHub accounts that maintain this index. Pull requests they open may change any file and set
+# a library's tier; everyone else may change only their own publisher folder, with tier
+# "unverified". CI reads this file from the main branch, never from the pull request.
+bherbruck
+jyviko

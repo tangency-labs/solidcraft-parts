@@ -1,0 +1,2 @@
+# Used only by CI and local checks, never by a library.
+jsonschema==4.23.0

@@ -1,0 +1,59 @@
+# Checks a pull request that adds or changes a library manifest.
+#
+# Runs on `pull_request` (never `pull_request_target`): pull requests from forks get a read-only
+# token and no secrets. The checks themselves (scripts, schema, licence list, maintainers) are
+# taken from the base branch, and only the pull request's manifests are read from its checkout.
+# Nothing from a library's repository is run: the release asset is downloaded, hashed and its
+# zip directory listed, never unpacked.
+name: Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 30
+    steps:
+      - name: Check out the checks (base branch)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: tools
+          persist-credentials: false
+
+      - name: Check out the pull request
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: pr
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install the schema validator
+        run: |
+          python -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check -r tools/scripts/requirements.txt
+
+      - name: Check the changes
+        env:
+          # The job's own read-only token, used only to read public repository data from the
+          # GitHub API without hitting its anonymous rate limit.
+          GITHUB_TOKEN: ${{ github.token }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" -I tools/scripts/check.py pr \
+            --tree pr --base "$BASE_SHA" --head HEAD --author "$AUTHOR" --network

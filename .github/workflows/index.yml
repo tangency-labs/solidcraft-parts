@@ -1,0 +1,85 @@
+# Builds index.json from the manifests on main and publishes it with GitHub Pages:
+#   https://tangency-labs.github.io/solidcraft-parts/index.json
+# Once a day it also checks every listed release again (the asset is still there and still
+# matches its SHA-256), so a changed or deleted release shows up here.
+name: Index
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: index
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Install the schema validator
+        run: |
+          python -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet --disable-pip-version-check -r scripts/requirements.txt
+
+      - name: Check every manifest
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          # The daily run downloads and hashes every release again; a push checks the manifests only.
+          NETWORK: ${{ github.event_name != 'push' && '--network' || '' }}
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" -I scripts/check.py manifests $NETWORK
+
+      - name: Build index.json
+        run: |
+          "$RUNNER_TEMP/venv/bin/python" -I scripts/build_index.py --out site --include-examples
+          mkdir -p site/schema && cp schema/library.schema.json site/schema/library.schema.json
+          cat > site/index.html <<'HTML'
+          <!doctype html><meta charset="utf-8"><title>SolidCraft parts index</title>
+          <p>The SolidCraft parts index: <a href="index.json">index.json</a>.
+          Add a library at <a href="https://github.com/tangency-labs/solidcraft-parts">tangency-labs/solidcraft-parts</a>.</p>
+          HTML
+
+      # Signing hook. The workshop (workshop.solidcraft.io) will sign the index. When it does, this
+      # step writes site/index.json.sig next to index.json; until then it is skipped. Turn it on
+      # by setting the repository variable INDEX_SIGNING to "true" and adding the signing step's
+      # command here. Clients must treat a missing .sig as "unsigned", never as an error.
+      - name: Sign index.json
+        if: ${{ vars.INDEX_SIGNING == 'true' }}
+        run: |
+          echo "::error::INDEX_SIGNING is on but no signing command is set up yet"
+          exit 1
+
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
+        with:
+          path: site
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
