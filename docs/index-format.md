@@ -14,7 +14,7 @@ GitHub Pages:
 ```json
 {
   "index_version": 1,
-  "generated_at": "2026-11-26T03:00:00+00:00",
+  "generated_at": "2026-11-26T03:00:00Z",
   "source": { "repo": "tangency-labs/solidcraft-parts", "commit": "<40 hex digits>" },
   "libraries": [
     {
@@ -40,7 +40,7 @@ GitHub Pages:
 
 - `index_version` changes only when a client would read the file wrongly. Clients refuse a
   version they don't know and keep their last good copy.
-- `generated_at` is the time of the commit the index was built from, so the same commit always
+- `generated_at` is the time (UTC) of the commit the index was built from, so the same commit always
   gives the same file.
 - `libraries` is sorted by `id`. Each entry carries the manifest's fields (see
   [manifest.md](manifest.md)), with `tags` always present (maybe empty) and `homepage` defaulting

@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -26,8 +27,9 @@ FIELDS = ["id", "name", "publisher", "repo", "release", "format", "format_versio
 
 
 def git(*args: str) -> str:
+    env = {**os.environ, "TZ": "UTC"}
     try:
-        return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True).stdout.strip()
+        return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True, env=env).stdout.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
 
@@ -55,7 +57,7 @@ def build(include_examples: bool) -> dict:
     libraries.sort(key=lambda e: e["id"])
     return {
         "index_version": INDEX_VERSION,
-        "generated_at": git("log", "-1", "--format=%cI") or None,
+        "generated_at": git("log", "-1", "--date=format-local:%Y-%m-%dT%H:%M:%SZ", "--format=%cd") or None,
         "source": {"repo": REPO, "commit": git("rev-parse", "HEAD") or None},
         "libraries": libraries,
     }
